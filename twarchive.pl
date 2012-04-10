@@ -7,7 +7,7 @@
 # ##
 # ## AUTHOR: bongo
 # ## DATE: (06..09).04.2012 (basic backup procedure and cfg taken from a script written by balu @19.02.2011)
-# ## VERSION: 0.52
+# ## VERSION: 0.521
 # ##
 # TODO: include option to exclude RTs
 require Encode;
@@ -170,7 +170,7 @@ sub backup_tweets {
 
   my $err = undef; # possible err code we find afer eval
   if(!$backup_old){
-    open(FILE, ">>$dataPath/$backup_file");
+    open(FILE, ">>$backup_file");
   }
   while( 1 ){
     if($err){
@@ -234,10 +234,10 @@ sub backup_tweets {
 		$write_buffer .= Encode::encode_utf8("$status->{created_at} $status->{time} <$status->{id_str}> <$status->{user}{screen_name}> $status->{text}\n");
 	  }
 	  if($backup_old){
-		prepend("$dataPath/$backup_file", $write_buffer);
+		prepend("$backup_file", $write_buffer);
 	  }
 	  else {
-		append("$dataPath/$backup_file", $write_buffer);
+		append("$backup_file", $write_buffer);
 	  }
 	}; # END EVAL
 	$err = $@;
@@ -277,7 +277,7 @@ sub showRateLimit {
 
 ################ BEGIN MAIN ################
 my $backup_old = 0;
-if(! (-e $cfg->param('own_tweets.file'))){
+if(! (-e $dataPath.$cfg->param('own_tweets.file'))){
   print "This seems to be the first run. Do you want to catch up your old tweets now? [y/N] ";
   if(lc(<STDIN>) =~ /^y$/){
 	if(!($cfg->param('own_tweets.first_tweet_id')=~/^[0-9]+$/)) {
@@ -295,24 +295,25 @@ if($backup_own_tweets =~ /^((yes)|(1))$/){
 	$tweetCursor = $cfg->param('own_tweets.first_tweet_id'); #const
   }
   else {
-	if(!(-e $cfg->param('own_tweets.file'))){
+	if(!(-e $dataPath.$cfg->param('own_tweets.file'))){
 	  $tweetCursor = undef; #ignore ID in the first run
 	}
   }
-  backup_tweets($cfg->param('own_tweets.file'),	#output goes here
+  backup_tweets($dataPath.$cfg->param('own_tweets.file'),	#output goes here
 				$tweetCursor,		#at which tweet id to start the backup (the earlier, the more tweets get caught)
 				"user_timeline",	# backup the user's timeline (own tweets & RTs)
 				$backup_old); 		# backup_old = true (we have to prepend data instead of appending)
 }
 if($backup_mentions){
   my $mention_last_id = $cfg->param('mentions.last_tweet_id');
-  if(!(-e $cfg->param('mentions.file'))){
+  if(!(-e $dataPath.$cfg->param('mentions.file'))){
 	$mention_last_id = ""; #ignore ID in the first run
   }
-  backup_tweets($cfg->param('mentions.file'),	# output goes here
+  backup_tweets($dataPath.$cfg->param('mentions.file'),	# output goes here
 				$mention_last_id, # the API doesn't provide us >200 latest items anyway
 				"mentions",	# backup the user's mentions (by others)
 				0); #regular mode
 }		
 
 if($verb){print "run finished\n";}
+
