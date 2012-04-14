@@ -7,7 +7,7 @@
 # ##
 # ## AUTHOR: bongo
 # ## DATE: (06..09).04.2012 (basic backup procedure and cfg taken from a script written by balu @19.02.2011)
-# ## VERSION: 0.521
+# ## VERSION: 0.522
 # ##
 # TODO: include option to exclude RTs
 require Encode;
@@ -39,7 +39,8 @@ elsif($ARGV[0] =~ "((-d)|(--debug))"){
 #check cfg items
 my @cfg_items = qw(consumer_key consumer_secret data_dir
 		   own_tweets.backup own_tweets.file own_tweets.last_tweet_id
-		   mentions.backup mentions.file mentions.last_tweet_id);
+		   mentions.backup mentions.file mentions.last_tweet_id
+                   favorites.backup favorites.file favorites.last_tweet_id);
 
 foreach(@cfg_items) {
   my $cfg_val = $cfg->param($_);
@@ -74,6 +75,7 @@ foreach(@cfg_items) {
 }
 my $backup_own_tweets = $cfg->param('own_tweets.backup');
 my $backup_mentions = $cfg->param('mentions.backup');
+my $backup_favorites = $cfg->param('favorites.backup');
 my $dataPath = $cfg->param('data_dir');
 
 # setup nt module
@@ -117,6 +119,11 @@ backup=yes
 [mentions]
 last_tweet_id=
 file=backup_mentions
+backup=yes
+
+[favorites]
+last_tweet_id=
+file=backup_favorites
 backup=yes
 
 [default]
@@ -205,14 +212,24 @@ sub backup_tweets {
 		}
 	  }
 	  elsif($api_method =~ "user_timeline"){
-	    if($verb){ print "loading user timeline...\n"; }
+		if($verb){ print "loading user timeline...\n"; }
 		if(!$lastid){
 		  $statuses = $nt->user_timeline({count => 3200, include_rts => 1});
-		}
+	    	}
 	    else {
 		  $statuses = $nt->user_timeline({count => 3200, since_id => $lastid,
-										  page => $page, include_rts => 1});
-		}	 	
+						  page => $page, include_rts => 1});
+	    }	 	
+	  }
+	  elsif($api_method =~ "favorites"){
+		if($verb){ print "loading favorites...\n"; }
+                if(!$lastid){
+                  $statuses = $nt->favorite({count => 200});
+                }
+		else {
+                  $statuses = $nt->favorites({count => 200, since_id => $lastid,
+                                              page => $page});
+            	}
 	  }
 	  else{ die("No API method specified"); }
 	  if($verb){ print "index_oldest:".(@$statuses-1)."\n"; }
@@ -264,6 +281,12 @@ sub backup_tweets {
 	  $cfg->param('mentions.last_tweet_id', $newest_tweet_id); #write back lastid to conf
 	}
   }
+  elsif($api_method=~"favorites"){
+        if($newest_tweet_id > $cfg->param('favorites.last_tweet_id')){
+          if($verb){ print "writing favorites.last_tweet_id=$newest_tweet_id to conf$/"; }
+          $cfg->param('favorites.last_tweet_id', $newest_tweet_id); #write back lastid to conf
+        }	
+  }
   $cfg->save();
 }
 
@@ -304,7 +327,7 @@ if($backup_own_tweets =~ /^((yes)|(1))$/){
 				"user_timeline",	# backup the user's timeline (own tweets & RTs)
 				$backup_old); 		# backup_old = true (we have to prepend data instead of appending)
 }
-if($backup_mentions){
+if($backup_mentions =~ /^((yes)|(1))$/){
   my $mention_last_id = $cfg->param('mentions.last_tweet_id');
   if(!(-e $dataPath.$cfg->param('mentions.file'))){
 	$mention_last_id = ""; #ignore ID in the first run
@@ -314,6 +337,16 @@ if($backup_mentions){
 				"mentions",	# backup the user's mentions (by others)
 				0); #regular mode
 }		
+if($backup_favorites =~ /^((yes)|(1))$/){
+  my $fav_last_id = $cfg->param('favorites.last_tweet_id');
+  if(!(-e $dataPath.$cfg->param('favorites.file'))){
+        $fav_last_id = ""; #ignore ID in the first run
+  }
+  backup_tweets($dataPath.$cfg->param('favorites.file'), # output goes here
+                                $fav_last_id, # the API doesn't provide us >200 latest items anyway
+                                "favorites",  # backup the user's mentions (by others)
+                                0); #regular mode
+}
 
 if($verb){print "run finished\n";}
 
