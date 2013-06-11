@@ -22,6 +22,11 @@ sub generate_cfg;
 my $cfg = new Config::Simple();
 ############# USER VARIABLE #############
 my $cfgFile = $ENV{HOME}."/etc/twarchive.conf"; # location of config file
+#########################################
+# Try to find config in script dir if not found in pref declared dir
+if (! (-e $cfgFile)) {
+    $cfgFile = dirname(__FILE__)."/twarchive.conf";
+}
 ########################################
 # Try to find config in script dir if not found in pref declared dir
 if (! (-e $cfgFile)) {
