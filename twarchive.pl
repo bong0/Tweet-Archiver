@@ -7,9 +7,13 @@
 # ##
 # ## AUTHOR: bongo
 # ## DATE: (06..09).04.2012 (basic backup procedure and cfg taken from a script written by balu @19.02.2011)
-# ## VERSION: 0.522
+# ## Contributed:
+# ## balu @ 11.06.13
+# ##
+# ## VERSION: 0.53
 # ##
 # TODO: include option to exclude RTs
+# TODO: suporte rate limitations
 require Encode;
 use Data::Dumper;
 use Net::Twitter;
