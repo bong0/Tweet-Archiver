@@ -7,10 +7,15 @@
 # ##
 # ## AUTHOR: bongo
 # ## DATE: (06..09).04.2012 (basic backup procedure and cfg taken from a script written by balu @19.02.2011)
-# ## VERSION: 0.522
+# ## Contributed:
+# ## balu @ 11.06.13
+# ##
+# ## VERSION: 0.53
 # ##
 # TODO: include option to exclude RTs
+# TODO: suporte rate limitations
 require Encode;
+use Data::Dumper;
 use Net::Twitter;
 use Config::Simple;
 use Scalar::Util 'blessed';
@@ -22,6 +27,11 @@ my $cfg = new Config::Simple();
 ############# USER VARIABLE #############
 my $cfgFile = $ENV{HOME}."/etc/twarchive.conf"; # location of config file
 #########################################
+# Try to find config in script dir if not found in pref declared dir
+if (! (-e $cfgFile)) {
+    $cfgFile = dirname(__FILE__)."/twarchive.conf";
+}
+########################################
 # Try to find config in script dir if not found in pref declared dir
 if (! (-e $cfgFile)) {
     $cfgFile = dirname(__FILE__)."/twarchive.conf";
@@ -86,7 +96,7 @@ my $dataPath = $cfg->param('data_dir');
 
 # setup nt module
 my $nt = Net::Twitter->new(
-    traits          => ['API::REST', 'OAuth'],
+    traits          => ['API::RESTv1_1', 'OAuth'],
     consumer_key    => $cfg->param('consumer_key'),
     consumer_secret => $cfg->param('consumer_secret')
 );
@@ -298,10 +308,12 @@ sub backup_tweets {
 
 sub showRateLimit {
   my $ratelimit = $nt->rate_limit_status({ authenticate => 1 });
-  if($verb){ print "hits remaining: " .$ratelimit->{remaining_hits}."/".$ratelimit->{hourly_limit}."\n"; }
-  if($ratelimit->{remaining_hits} <= 10){
-	die "RATE LIMIT ALMOST REACHED -- will not do further requests";
-  }
+  
+  if($verb){ print Dumper($ratelimit); print "hits remaining: " .$ratelimit->{remaining_hits}."/".$ratelimit->{hourly_limit}."\n"; }
+  #has to be fixed
+  #if($ratelimit->{remaining_hits} <= 5){
+  #	die "Remaining: $ratelimit->{remaining_hits} RATE LIMIT ALMOST REACHED -- will not do further requests";
+  #}
 }
 
 ################ BEGIN MAIN ################
